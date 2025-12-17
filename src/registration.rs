@@ -5,14 +5,22 @@ pub enum ButtonType {
 }
 
 pub struct Registration {
-    db_connected: bool,
+    pub db_connected: bool,
+    pub connection_error: Option<String>,
 }
 
 impl Registration {
     pub fn new() -> Self {
         Self {
             db_connected: false,
+            connection_error: None,
         }
+    }
+
+    // Called by settings dialog
+    pub fn set_connection_status(&mut self, success: bool, error: Option<String>) {
+        self.db_connected = success;
+        self.connection_error = error;
     }
 
     pub fn handle_key_input(&mut self, key_input: &str) {

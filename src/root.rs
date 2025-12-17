@@ -1,6 +1,7 @@
 use gpui::{
-    div, rgb, DefiniteLength, FocusHandle, InteractiveElement, IntoElement, KeyDownEvent,
-    ParentElement, Render, Styled, ViewContext,
+    div, rgb, size, Bounds, DefiniteLength, FocusHandle, InteractiveElement, IntoElement,
+    KeyDownEvent, ParentElement, Render, Styled, TitlebarOptions, ViewContext, WindowBounds,
+    WindowOptions,
 };
 use gpui::{px, VisualContext};
 
@@ -8,6 +9,7 @@ use crate::button::*;
 use crate::consts::*;
 use crate::list::*;
 use crate::registration::*;
+use crate::settings::*;
 use crate::styles::*;
 
 pub struct Root {
@@ -46,6 +48,31 @@ impl Root {
 
         buttons
     }
+
+    fn open_settings_dialog(&mut self, cx: &mut ViewContext<Self>) {
+        let bounds = Bounds::centered(None, size(px(400.0), px(300.0)), cx);
+
+        cx.open_window(
+            WindowOptions {
+                window_bounds: Some(WindowBounds::Windowed(bounds)),
+                titlebar: Some(TitlebarOptions {
+                    title: Some("Database Settings".into()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            |cx| {
+                cx.new_view(|_cx| {
+                    Settings::new(|success, error, cx| {
+                        // This closure needs to update the Root's registration state
+                        // However, updating across windows usually requires a Global or Model.
+                        // For a simple POC, you can use cx.update_global or emit an event.
+                        println!("Connection result: {}", success);
+                    })
+                })
+            },
+        );
+    }
 }
 
 impl Render for Root {
@@ -56,6 +83,18 @@ impl Render for Root {
         // To accept key stroke events it is necessary to focus the
         // view at the beginning
         cx.focus(&self.focus_handle);
+
+        let status_text = if self.registration.db_connected {
+            "Connected"
+        } else {
+            "Not Connected"
+        };
+
+        let status_color = if self.registration.db_connected {
+            STATUS_COLOR_GREEN
+        } else {
+            STATUS_COLOR_RED
+        };
 
         div()
             .track_focus(&self.focus_handle)
@@ -69,6 +108,9 @@ impl Render for Root {
             .flex_col()
             .bg(rgb(BUTTON_PANEL_COLOR))
             .text_lg()
+            .text_sm()
+            .text_color(rgb(status_color))
+            .child(status_text)
             .child(cx.new_view(|_cx| List::new(list_placeholder)))
             .child(
                 div()
