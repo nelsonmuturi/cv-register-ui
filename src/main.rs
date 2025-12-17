@@ -1,7 +1,7 @@
 mod button;
 mod consts;
 mod list;
-mod logic;
+mod registration;
 mod root;
 mod styles;
 

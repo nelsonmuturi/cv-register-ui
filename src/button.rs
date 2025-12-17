@@ -1,4 +1,4 @@
-use crate::logic::*;
+use crate::registration::*;
 use crate::styles::*;
 use gpui::*;
 
@@ -76,7 +76,7 @@ impl RenderOnce for Button {
 
         self.base
             .cursor_pointer()
-            .h(DefiniteLength::Fraction(0.176))
+            .h(DefiniteLength::Fraction(1.0))
             .bg(rgb(style.bg))
             .text_color(rgb(style.text_color))
             .hover(|this| this.bg(rgb(style.hover_color)))

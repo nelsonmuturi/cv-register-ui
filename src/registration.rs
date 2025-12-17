@@ -1,31 +1,17 @@
 #[derive(Clone, Copy)]
-pub enum Operation {
-    Division,
-    Times,
-    Minus,
-    Plus,
-}
-
-#[derive(Clone, Copy)]
 pub enum ButtonType {
     RegisterEmployee,
     Settings,
 }
 
-pub struct Logic {
-    first_value: f64,
-    second_value: Option<f64>,
-    operation: Option<Operation>,
-    use_comma: bool,
+pub struct Registration {
+    db_connected: bool,
 }
 
-impl Logic {
+impl Registration {
     pub fn new() -> Self {
         Self {
-            first_value: 0.0,
-            second_value: None,
-            operation: None,
-            use_comma: false,
+            db_connected: false,
         }
     }
 

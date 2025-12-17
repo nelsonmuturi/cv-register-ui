@@ -16,12 +16,12 @@ impl Render for List {
         div()
             .bg(rgb(LIST_COLOR))
             .text_color(rgb(PRIMARY_COLOR))
-            .h(DefiniteLength::Fraction(0.2))
+            .h(DefiniteLength::Fraction(0.85))
             .px_8()
             .w_full()
             .flex()
-            .items_center()
-            .justify_end()
+            .items_start()
+            .justify_start()
             .child(format!("{}", self.value))
     }
 }

@@ -7,20 +7,20 @@ use gpui::{px, VisualContext};
 use crate::button::*;
 use crate::consts::*;
 use crate::list::*;
-use crate::logic::*;
+use crate::registration::*;
 use crate::styles::*;
 
 pub struct Root {
-    pub logic: Logic,
+    pub registration: Registration,
     focus_handle: FocusHandle,
 }
 
 impl Root {
     pub fn new(cx: &mut ViewContext<Self>) -> Self {
-        let logic = Logic::new();
+        let registration = Registration::new();
 
         Self {
-            logic,
+            registration,
             focus_handle: cx.focus_handle(),
         }
     }
@@ -37,7 +37,7 @@ impl Root {
 
             let button =
                 Button::new(button_type, variant).on_click(cx.listener(move |this, _view, cx| {
-                    this.logic.on_button_pressed(button_type);
+                    this.registration.on_button_pressed(button_type);
                     cx.notify()
                 }));
 
@@ -50,7 +50,7 @@ impl Root {
 
 impl Render for Root {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
-        let list_placeholder = self.logic.get_list_value();
+        let list_placeholder = self.registration.get_list_value();
         let buttons = self.get_buttons(cx);
 
         // To accept key stroke events it is necessary to focus the
@@ -60,7 +60,8 @@ impl Render for Root {
         div()
             .track_focus(&self.focus_handle)
             .on_key_down(cx.listener(|this, event: &KeyDownEvent, cx| {
-                this.logic.handle_key_input(&event.keystroke.key.as_str());
+                this.registration
+                    .handle_key_input(&event.keystroke.key.as_str());
                 cx.notify();
             }))
             .size_full()
@@ -76,7 +77,7 @@ impl Render for Root {
                     .flex_wrap()
                     .items_end()
                     .justify_start()
-                    .h(DefiniteLength::Fraction(0.80))
+                    .h(DefiniteLength::Fraction(0.15))
                     .py(DefiniteLength::Fraction(0.02))
                     .gap(DefiniteLength::Fraction(0.02))
                     .children(buttons)

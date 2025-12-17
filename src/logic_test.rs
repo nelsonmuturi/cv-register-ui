@@ -1,1 +1,1 @@
-use crate::logic::*;
+use crate::registration::*;
