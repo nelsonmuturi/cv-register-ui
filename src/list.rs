@@ -1,20 +1,20 @@
 use crate::styles::*;
 use gpui::*;
 
-pub struct Display {
-    value: f64,
+pub struct List {
+    value: String,
 }
 
-impl Display {
-    pub fn new(value: f64) -> Self {
-        Display { value }
+impl List {
+    pub fn new(value: String) -> Self {
+        List { value }
     }
 }
 
-impl Render for Display {
+impl Render for List {
     fn render(&mut self, _cx: &mut ViewContext<Self>) -> impl IntoElement {
         div()
-            .bg(rgb(DISPLAY_COLOR))
+            .bg(rgb(LIST_COLOR))
             .text_color(rgb(PRIMARY_COLOR))
             .h(DefiniteLength::Fraction(0.2))
             .px_8()

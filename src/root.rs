@@ -1,12 +1,12 @@
-use gpui::VisualContext;
 use gpui::{
     div, rgb, DefiniteLength, FocusHandle, InteractiveElement, IntoElement, KeyDownEvent,
     ParentElement, Render, Styled, ViewContext,
 };
+use gpui::{px, VisualContext};
 
 use crate::button::*;
 use crate::consts::*;
-use crate::display::*;
+use crate::list::*;
 use crate::logic::*;
 use crate::styles::*;
 
@@ -50,7 +50,7 @@ impl Root {
 
 impl Render for Root {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
-        let display_value = self.logic.get_display_value();
+        let list_placeholder = self.logic.get_list_value();
         let buttons = self.get_buttons(cx);
 
         // To accept key stroke events it is necessary to focus the
@@ -66,20 +66,21 @@ impl Render for Root {
             .size_full()
             .flex()
             .flex_col()
-            .bg(rgb(PAD_COLOR))
+            .bg(rgb(BUTTON_PANEL_COLOR))
             .text_lg()
-            .child(cx.new_view(|_cx| Display::new(display_value)))
+            .child(cx.new_view(|_cx| List::new(list_placeholder)))
             .child(
                 div()
                     .flex()
                     .flex_row()
                     .flex_wrap()
-                    .items_center()
-                    .justify_center()
+                    .items_end()
+                    .justify_start()
                     .h(DefiniteLength::Fraction(0.80))
                     .py(DefiniteLength::Fraction(0.02))
                     .gap(DefiniteLength::Fraction(0.02))
-                    .children(buttons),
+                    .children(buttons)
+                    .ml(px(10.0)),
             )
     }
 }

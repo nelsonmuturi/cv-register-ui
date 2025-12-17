@@ -1,7 +1,3 @@
 use crate::logic::*;
 
-pub const BUTTONS: [ButtonType; 3] = [
-    ButtonType::RegisterEmployee,
-    ButtonType::Settings,
-    ButtonType::Number(0),
-];
+pub const BUTTONS: [ButtonType; 2] = [ButtonType::RegisterEmployee, ButtonType::Settings];

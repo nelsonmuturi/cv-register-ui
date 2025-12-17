@@ -34,7 +34,7 @@ impl Button {
     fn get_variant_style(&self) -> ButtonStyle {
         match self.variant {
             ButtonVariant::Neutral => ButtonStyle {
-                bg: PAD_COLOR,
+                bg: BUTTON_PANEL_COLOR,
                 text_color: WHITE_COLOR,
                 hover_color: BUTTON_COLOR_HOVER,
             },
@@ -55,7 +55,6 @@ impl Button {
         match button_type {
             ButtonType::RegisterEmployee => "Register Employee".to_owned(),
             ButtonType::Settings => "Settings".to_owned(),
-            ButtonType::Number(num) => format!("{}", num),
         }
     }
 }
@@ -76,13 +75,13 @@ impl RenderOnce for Button {
         let style = self.get_variant_style();
 
         self.base
-            .w_full()
             .cursor_pointer()
             .h(DefiniteLength::Fraction(0.176))
             .bg(rgb(style.bg))
             .text_color(rgb(style.text_color))
             .hover(|this| this.bg(rgb(style.hover_color)))
             .flex()
+            .p(px(10.0))
             .rounded_lg()
             .items_center()
             .justify_center()

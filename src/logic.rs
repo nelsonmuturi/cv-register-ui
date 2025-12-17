@@ -10,7 +10,6 @@ pub enum Operation {
 pub enum ButtonType {
     RegisterEmployee,
     Settings,
-    Number(u8),
 }
 
 pub struct Logic {
@@ -32,63 +31,24 @@ impl Logic {
 
     pub fn handle_key_input(&mut self, key_input: &str) {
         if let Ok(num) = key_input.parse::<u8>() {
-            self.on_button_pressed(ButtonType::Number(num))
+            self.on_button_pressed(ButtonType::RegisterEmployee)
         } else {
             match key_input {
+                "enter" => self.on_button_pressed(ButtonType::RegisterEmployee),
+                "s" => self.on_button_pressed(ButtonType::Settings),
                 _ => {}
             }
         }
     }
 
-    pub fn get_display_value(&self) -> f64 {
-        self.second_value.unwrap_or(self.first_value)
+    pub fn get_list_value(&self) -> String {
+        String::from("placeholder for list")
     }
 
     pub fn on_button_pressed(&mut self, button_type: ButtonType) {
         match button_type {
-            ButtonType::Number(num) => self.add_number(num),
             ButtonType::RegisterEmployee => self.open_register_dialog(),
             ButtonType::Settings => self.open_settings_dialog(),
-        }
-    }
-
-    fn append_digit(&self, value: f64, digit: u8) -> f64 {
-        let digit_str = digit.to_string();
-        let mut value_str = value.to_string();
-
-        // Check if there's a decimal in the string, if not, add it
-        if !value_str.contains('.') & self.use_comma {
-            value_str.push('.');
-        }
-
-        // Append the digit to the string
-        value_str.push_str(&digit_str);
-
-        // Parse the string back to f64
-        value_str.parse::<f64>().unwrap()
-    }
-
-    fn change_current_value(&mut self, f: &dyn Fn(f64) -> f64) {
-        self.set_result(f(self.get_display_value()));
-    }
-
-    fn set_result(&mut self, n: f64) {
-        self.first_value = n;
-        self.second_value = None;
-        self.operation = None;
-        self.use_comma = n % 1.0 != 0.0;
-    }
-
-    fn get_result(&mut self) {
-        if let (Some(op), Some(second_value)) = (self.operation, self.second_value) {
-            let result = match op {
-                Operation::Plus => self.first_value + second_value,
-                Operation::Minus => self.first_value - second_value,
-                Operation::Times => self.first_value * second_value,
-                Operation::Division => self.first_value / second_value,
-            };
-
-            self.set_result(result);
         }
     }
 
@@ -98,15 +58,5 @@ impl Logic {
 
     fn open_settings_dialog(&mut self) {
         // TODO
-    }
-
-    fn add_number(&mut self, n: u8) -> () {
-        match self.operation {
-            Some(_) => match self.second_value {
-                Some(value) => self.second_value = Some(self.append_digit(value, n)),
-                None => self.second_value = Some(n as f64),
-            },
-            None => self.first_value = self.append_digit(self.first_value, n),
-        }
     }
 }
