@@ -21,11 +21,6 @@ pub enum ButtonType {
     Settings,
 }
 
-pub enum RegistrationEvent {
-    OpenSettings,
-    OpenRegister,
-}
-
 pub struct Registration {
     pub active_tab: ActiveTab,
     pub db_connected: bool,
@@ -34,8 +29,6 @@ pub struct Registration {
     pub focused_field: FocusField, // Track which field is being typed into
     pub connection_error: Option<String>,
 }
-
-impl EventEmitter<RegistrationEvent> for Registration {}
 
 impl Registration {
     pub fn new() -> Self {
@@ -71,25 +64,6 @@ impl Registration {
                 target.push_str(k);
             }
             _ => {}
-        }
-    }
-
-    pub fn handle_key_input(&mut self, key_input: &str, cx: &mut ModelContext<Self>) {
-        match key_input {
-            "enter" => self.on_button_pressed(ButtonType::RegisterEmployee, cx),
-            "s" => self.on_button_pressed(ButtonType::Settings, cx),
-            _ => {
-                if key_input.parse::<u8>().is_ok() {
-                    self.on_button_pressed(ButtonType::RegisterEmployee, cx);
-                }
-            }
-        }
-    }
-
-    pub fn on_button_pressed(&mut self, button_type: ButtonType, cx: &mut ModelContext<Self>) {
-        match button_type {
-            ButtonType::RegisterEmployee => cx.emit(RegistrationEvent::OpenRegister),
-            ButtonType::Settings => cx.emit(RegistrationEvent::OpenSettings),
         }
     }
 

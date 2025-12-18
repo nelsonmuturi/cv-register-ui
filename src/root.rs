@@ -16,14 +16,21 @@ impl Root {
     pub fn new(cx: &mut ViewContext<Self>) -> Self {
         // Create the model in the app context
         let registration = cx.new_model(|_| Registration::new());
+        let focus_handle = cx.focus_handle();
+
+        // Focus once during initialization
+        cx.focus(&focus_handle);
 
         Self {
             registration,
-            focus_handle: cx.focus_handle(),
+            focus_handle,
         }
     }
 
-    fn render_tab_bar(&self, _cx: &mut ViewContext<Self>, active: ActiveTab) -> impl IntoElement {
+    fn render_tab_bar(&self, cx: &mut ViewContext<Self>) -> impl IntoElement {
+        let reg = self.registration.read(cx);
+        let active = reg.active_tab;
+
         div()
             .flex()
             .bg(rgb(LIST_COLOR))
@@ -34,20 +41,12 @@ impl Root {
                 ActiveTab::Settings,
                 active == ActiveTab::Settings,
             ))
-            .child(self.tab_button(
-                "Manage Employees",
-                ActiveTab::Manage,
-                active == ActiveTab::Manage,
-            ))
-            .child(self.tab_button(
-                "Employee List",
-                ActiveTab::Employees,
-                active == ActiveTab::Employees,
-            ))
+            .child(self.tab_button("Manage", ActiveTab::Manage, active == ActiveTab::Manage))
+            .child(self.tab_button("List", ActiveTab::Employees, active == ActiveTab::Employees))
     }
 
     fn tab_button(&self, label: &'static str, tab: ActiveTab, is_active: bool) -> impl IntoElement {
-        let registration = self.registration.clone();
+        let reg_model = self.registration.clone();
         div()
             .px_4()
             .py_2()
@@ -60,8 +59,10 @@ impl Root {
             .child(label)
             .cursor_pointer()
             .on_mouse_down(MouseButton::Left, move |_, cx| {
-                registration.update(cx, |reg, cx| {
-                    reg.set_tab(tab);
+                cx.stop_propagation(); // PREVENT OVERLAP ISSUES
+                reg_model.update(cx, |r, cx| {
+                    r.active_tab = tab;
+                    r.focused_field = FocusField::None;
                     cx.notify();
                 });
             })
@@ -189,9 +190,8 @@ impl Root {
 
     fn crud_button(&self, label: &'static str) -> impl IntoElement {
         div()
-            .bg(rgb(BUTTON_COLOR))
             .p_2()
-            .rounded_md()
+            .bg(rgb(BUTTON_COLOR))
             .child(label)
             .cursor_pointer()
     }
@@ -208,33 +208,23 @@ impl Root {
 
 impl Render for Root {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
-        let reg = self.registration.read(cx);
-        let active_tab = reg.active_tab;
+        let active_tab = self.registration.read(cx).active_tab;
 
         div()
             .track_focus(&self.focus_handle)
-            .on_key_down(cx.listener(|this, event: &KeyDownEvent, cx| {
-                let key = event.keystroke.key.as_str();
-
-                this.registration.update(cx, |reg, cx| {
-                    // If a field is focused, send input there
-                    if reg.focused_field != FocusField::None {
-                        reg.handle_text_input(key);
-                    } else {
-                        // Otherwise, handle tab switching/shortcuts
-                        reg.handle_key_input(key, cx);
-                    }
-                });
+            .on_key_down(cx.listener(|this, ev: &KeyDownEvent, cx| {
+                this.registration
+                    .update(cx, |r, _| r.handle_text_input(ev.keystroke.key.as_str()));
                 cx.notify();
             }))
             .size_full()
             .flex_col()
             .bg(rgb(BUTTON_PANEL_COLOR))
-            .child(self.render_tab_bar(cx, active_tab)) // Top Nav
-            .child(div().size_full().p_4().child(match active_tab {
+            .child(self.render_tab_bar(cx))
+            .child(div().flex_grow().p_4().child(match active_tab {
                 ActiveTab::Settings => self.render_settings_tab(cx),
                 ActiveTab::Manage => self.render_manage_tab(cx),
-                ActiveTab::Employees => self.render_employees_tab(cx),
+                ActiveTab::Employees => div().child("Employee List").into_any_element(),
             }))
     }
 }
