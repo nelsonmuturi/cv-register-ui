@@ -7,7 +7,7 @@ mod settings;
 mod styles;
 
 #[cfg(test)]
-mod logic_test;
+mod registration_test;
 
 use gpui::*;
 use root::*;

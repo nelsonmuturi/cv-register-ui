@@ -1,6 +1,20 @@
 use gpui::*;
 use sqlx::postgres::PgPoolOptions;
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum ActiveTab {
+    Settings,
+    Manage,
+    Employees,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum FocusField {
+    DbName,
+    DbPassword,
+    None,
+}
+
 #[derive(Clone, Copy)]
 pub enum ButtonType {
     RegisterEmployee,
@@ -13,7 +27,11 @@ pub enum RegistrationEvent {
 }
 
 pub struct Registration {
+    pub active_tab: ActiveTab,
     pub db_connected: bool,
+    pub db_name: String,
+    pub db_password: String,
+    pub focused_field: FocusField, // Track which field is being typed into
     pub connection_error: Option<String>,
 }
 
@@ -22,8 +40,37 @@ impl EventEmitter<RegistrationEvent> for Registration {}
 impl Registration {
     pub fn new() -> Self {
         Self {
+            active_tab: ActiveTab::Settings, // Default tab
             db_connected: false,
+            db_name: "face_identity_db".into(),
+            db_password: "".into(),
+            focused_field: FocusField::None,
             connection_error: None,
+        }
+    }
+
+    pub fn set_tab(&mut self, tab: ActiveTab) {
+        self.active_tab = tab;
+    }
+
+    pub fn handle_text_input(&mut self, key: &str) {
+        let target = match self.focused_field {
+            FocusField::DbName => &mut self.db_name,
+            FocusField::DbPassword => &mut self.db_password,
+            FocusField::None => return,
+        };
+
+        match key {
+            "backspace" => {
+                target.pop();
+            }
+            "space" => {
+                target.push(' ');
+            }
+            k if k.len() == 1 => {
+                target.push_str(k);
+            }
+            _ => {}
         }
     }
 
