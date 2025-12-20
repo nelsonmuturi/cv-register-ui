@@ -42,10 +42,6 @@ impl Registration {
         }
     }
 
-    pub fn set_tab(&mut self, tab: ActiveTab) {
-        self.active_tab = tab;
-    }
-
     pub fn handle_text_input(&mut self, key: &str) {
         let target = match self.focused_field {
             FocusField::DbName => &mut self.db_name,

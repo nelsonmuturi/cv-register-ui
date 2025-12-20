@@ -89,11 +89,15 @@ impl Root {
         };
 
         div()
+            .flex()
             .flex_col()
+            .gap_y(px(16.0))
+            .w(px(600.0))
             .gap_4()
             .child(
                 div()
                     .child(format!("Status: {}", status_text))
+                    .font_weight(FontWeight::BOLD)
                     .text_color(rgb(status_color)),
             )
             .gap_4()
@@ -115,10 +119,14 @@ impl Root {
             ))
             .child(
                 div()
+                    .flex()
+                    .justify_center()
+                    .items_center()
+                    .font_weight(FontWeight::BOLD)
                     .bg(rgb(PRIMARY_COLOR))
                     .p_2()
                     .rounded_md()
-                    .child("Connect to Postgres")
+                    .child("Connect to Postgres DB")
                     .on_mouse_down(MouseButton::Left, move |_, cx| {
                         // Call your connect_to_db logic here
                     }),
@@ -219,7 +227,7 @@ impl Render for Root {
             }))
             .size_full()
             .flex_col()
-            .bg(rgb(BUTTON_PANEL_COLOR))
+            .bg(rgb(DARK_MODE_COLOR))
             .child(self.render_tab_bar(cx))
             .child(div().flex_grow().p_4().child(match active_tab {
                 ActiveTab::Settings => self.render_settings_tab(cx),

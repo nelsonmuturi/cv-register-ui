@@ -5,7 +5,7 @@ pub const BUTTON_PANEL_COLOR: u32 = 0x444444;
 pub const BUTTON_COLOR: u32 = 0x606160;
 pub const BUTTON_COLOR_HOVER: u32 = 0x4F4F4F;
 pub const WHITE_COLOR: u32 = 0xcbcbcb;
-pub const GRAY_COLOR: u32 = 0xe6e6e6;
+pub const DARK_MODE_COLOR: u32 = 0x000000;
 
 pub const STATUS_COLOR_GREEN: u32 = 0x00FF00;
 pub const STATUS_COLOR_RED: u32 = 0xFF0000;
