@@ -53,9 +53,6 @@ impl Registration {
             "backspace" => {
                 target.pop();
             }
-            "space" => {
-                target.push(' ');
-            }
             k if k.len() == 1 => {
                 target.push_str(k);
             }
@@ -64,27 +61,38 @@ impl Registration {
     }
 
     pub fn connect_to_db(&self, db_name: String, password: String, cx: &mut ModelContext<Self>) {
+        println!("db_name {db_name}, password {password}");
+
         // Construct connection string
         let url = format!("postgres://postgres:{}@localhost/{}", password, db_name);
 
+        // 1. Capture the current Tokio handle from the main thread
+        let tokio_handle = tokio::runtime::Handle::current();
+
         // Spawn an async task so the UI remains responsive
         cx.spawn(|this, mut cx| async move {
-            let pool = PgPoolOptions::new()
-                .max_connections(5)
-                .acquire_timeout(std::time::Duration::from_secs(3))
-                .connect(&url)
-                .await;
+            // 2. "Enter" the Tokio context so sqlx can find the reactor
+            let pool = {
+                let _guard = tokio_handle.enter();
+                PgPoolOptions::new()
+                    .max_connections(5)
+                    .acquire_timeout(std::time::Duration::from_secs(3))
+                    .connect(&url)
+                    .await
+            };
 
-            // Update the model with the result
+            // 3. Jump back into GPUI's update loop to show the result
             this.update(&mut cx, |reg, cx| {
                 match pool {
                     Ok(_) => {
                         reg.db_connected = true;
                         reg.connection_error = None;
+                        println!("Connected successfully!");
                     }
                     Err(e) => {
                         reg.db_connected = false;
                         reg.connection_error = Some(e.to_string());
+                        eprintln!("Connection failed: {}", e);
                     }
                 }
                 cx.notify();

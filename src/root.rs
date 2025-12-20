@@ -1,4 +1,6 @@
 use gpui::*;
+use gpui::{Action, Model};
+use serde::Deserialize;
 
 use crate::button::*;
 use crate::consts::*;
@@ -10,6 +12,45 @@ use crate::styles::*;
 pub struct Root {
     pub registration: Model<Registration>,
     focus_handle: FocusHandle,
+}
+
+// 1. Define the struct (outside the macro)
+#[derive(Debug, Deserialize, Clone, PartialEq)]
+pub struct TypeChar {
+    pub text: String,
+}
+
+// Manually implement the Action trait (replaces the macro)
+impl Action for TypeChar {
+    fn name(&self) -> &'static str {
+        "root::TypeChar"
+    }
+
+    fn boxed_clone(&self) -> Box<dyn Action> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn partial_eq(&self, action: &dyn Action) -> bool {
+        todo!()
+    }
+
+    fn debug_name() -> &'static str
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
+    fn build(value: private::serde_json::Value) -> Result<Box<dyn Action>>
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
 }
 
 impl Root {
@@ -58,6 +99,7 @@ impl Root {
             })
             .child(label)
             .cursor_pointer()
+            .font_weight(FontWeight::BOLD)
             .on_mouse_down(MouseButton::Left, move |_, cx| {
                 cx.stop_propagation(); // PREVENT OVERLAP ISSUES
                 reg_model.update(cx, |r, cx| {
@@ -75,6 +117,8 @@ impl Root {
         let reg_for_name = self.registration.clone();
         // Clone for the second input field's closure
         let reg_for_pass = self.registration.clone();
+        // Clone the handle to move into db-connection mouse-down closure
+        let reg_model = self.registration.clone();
 
         let status_color = if reg.db_connected {
             STATUS_COLOR_GREEN
@@ -96,7 +140,7 @@ impl Root {
             .gap_4()
             .child(
                 div()
-                    .child(format!("Status: {}", status_text))
+                    .child(format!("STATUS: {}", status_text))
                     .font_weight(FontWeight::BOLD)
                     .text_color(rgb(status_color)),
             )
@@ -127,8 +171,21 @@ impl Root {
                     .p_2()
                     .rounded_md()
                     .child("Connect to Postgres DB")
+                    .cursor_pointer()
                     .on_mouse_down(MouseButton::Left, move |_, cx| {
-                        // Call your connect_to_db logic here
+                        // Call connect_to_db logic
+                        cx.stop_propagation(); // Prevent overlap issues
+
+                        // Use .update to bridge the context and access the latest state
+                        reg_model.update(cx, |reg_state, model_cx| {
+                            // reg_state is &mut Registration (the latest model data)
+                            // model_cx is &mut ModelContext<Registration>
+                            reg_state.connect_to_db(
+                                reg_state.db_name.clone(),
+                                reg_state.db_password.clone(),
+                                model_cx,
+                            );
+                        });
                     }),
             )
             .into_any_element()
@@ -144,12 +201,21 @@ impl Root {
         div()
             .flex_col()
             .gap_1()
-            .child(div().text_sm().child(label))
+            .child(
+                div()
+                    .text_sm()
+                    .font_weight(FontWeight::BOLD)
+                    .text_color(rgb(WHITE_COLOR))
+                    .child(label),
+            )
             .child(
                 div()
                     .p_2()
                     .bg(rgb(LIST_COLOR))
+                    .text_color(rgb(WHITE_COLOR))
                     .border_2()
+                    .hover(|this| this.bg(rgb(BUTTON_COLOR_HOVER)))
+                    .cursor_text()
                     // Highlight border if focused
                     .border_color(if is_focused {
                         rgb(PRIMARY_COLOR)
@@ -218,17 +284,57 @@ impl Render for Root {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         let active_tab = self.registration.read(cx).active_tab;
 
+        // Read the current state of the model
+        let reg_state = self.registration.read(cx);
+
+        // Determine status display logic
+        let (status_text, status_color) = if reg_state.db_connected {
+            ("Database Connected".to_string(), STATUS_COLOR_GREEN)
+        } else if let Some(ref err) = reg_state.connection_error {
+            (format!("Connection Error: {}", err), STATUS_COLOR_RED)
+        } else {
+            ("Not Connected".to_string(), STATUS_COLOR_NEUTRAL) // Gray
+        };
+
         div()
             .track_focus(&self.focus_handle)
-            .on_key_down(cx.listener(|this, ev: &KeyDownEvent, cx| {
-                this.registration
-                    .update(cx, |r, _| r.handle_text_input(ev.keystroke.key.as_str()));
+            // Handle the custom action with data
+            .on_action(cx.listener(|this, action: &TypeChar, cx| {
+                this.registration.update(cx, |reg, _| {
+                    if reg.focused_field != FocusField::None {
+                        reg.handle_text_input(&action.text);
+                    }
+                });
                 cx.notify();
+            }))
+            // 2. Handle control keys (Backspace, Enter, Tab)
+            .on_key_down(cx.listener(|this, event: &KeyDownEvent, cx| {
+                let key = event.keystroke.key.as_str();
+
+                // We only process non-character keys here to avoid double-typing
+                if key == "backspace" || key == "enter" {
+                    this.registration.update(cx, |reg, cx| {
+                        if reg.focused_field != FocusField::None {
+                            reg.handle_text_input(key);
+                        }
+                    });
+                    cx.notify();
+                }
             }))
             .size_full()
             .flex_col()
             .bg(rgb(DARK_MODE_COLOR))
             .child(self.render_tab_bar(cx))
+            // 3. Display the status
+            .child(
+                div()
+                    .p_2()
+                    .bg(rgb(0x222222))
+                    .text_sm()
+                    .text_color(rgb(status_color))
+                    .font_weight(FontWeight::BOLD)
+                    .child(status_text),
+            )
             .child(div().flex_grow().p_4().child(match active_tab {
                 ActiveTab::Settings => self.render_settings_tab(cx),
                 ActiveTab::Manage => self.render_manage_tab(cx),

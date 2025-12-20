@@ -9,3 +9,4 @@ pub const DARK_MODE_COLOR: u32 = 0x000000;
 
 pub const STATUS_COLOR_GREEN: u32 = 0x00FF00;
 pub const STATUS_COLOR_RED: u32 = 0xFF0000;
+pub const STATUS_COLOR_NEUTRAL: u32 = 0x888888;

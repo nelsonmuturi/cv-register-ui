@@ -1320,6 +1320,7 @@ name = "employee-register"
 version = "0.1.0"
 dependencies = [
  "gpui",
+ "serde",
  "sqlx",
  "strum",
  "strum_macros",

@@ -14,7 +14,8 @@ use root::*;
 
 actions!(register, [Quit]);
 
-fn main() {
+#[tokio::main]
+async fn main() {
     App::new().run(|cx: &mut AppContext| {
         cx.activate(true);
         cx.on_action(|_: &Quit, cx| cx.quit());
