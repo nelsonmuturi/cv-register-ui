@@ -284,6 +284,10 @@ impl Render for Root {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         let active_tab = self.registration.read(cx).active_tab;
 
+        // To accept key stroke events it is necessary to focus the
+        // view at the beginning
+        cx.focus(&self.focus_handle);
+
         // Read the current state of the model
         let reg_state = self.registration.read(cx);
 
@@ -298,6 +302,8 @@ impl Render for Root {
 
         div()
             .track_focus(&self.focus_handle)
+            .flex_col()
+            .size_full()
             // Handle the custom action with data
             .on_action(cx.listener(|this, action: &TypeChar, cx| {
                 this.registration.update(cx, |reg, _| {
@@ -311,18 +317,14 @@ impl Render for Root {
             .on_key_down(cx.listener(|this, event: &KeyDownEvent, cx| {
                 let key = event.keystroke.key.as_str();
 
-                // We only process non-character keys here to avoid double-typing
+                // Handle control keys that aren't captured by character typing
                 if key == "backspace" || key == "enter" {
-                    this.registration.update(cx, |reg, cx| {
-                        if reg.focused_field != FocusField::None {
-                            reg.handle_text_input(key);
-                        }
+                    this.registration.update(cx, |reg, _| {
+                        reg.handle_text_input(key);
                     });
                     cx.notify();
                 }
             }))
-            .size_full()
-            .flex_col()
             .bg(rgb(DARK_MODE_COLOR))
             .child(self.render_tab_bar(cx))
             // 3. Display the status
