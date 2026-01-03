@@ -77,11 +77,7 @@ impl Root {
             .bg(rgb(LIST_COLOR))
             .p_2()
             .gap_4()
-            .child(self.tab_button(
-                "Settings",
-                ActiveTab::Settings,
-                active == ActiveTab::Settings,
-            ))
+            .child(self.tab_button("Settings", ActiveTab::Manage, active == ActiveTab::Settings))
             .child(self.tab_button("Manage", ActiveTab::Manage, active == ActiveTab::Manage))
             .child(self.tab_button("List", ActiveTab::Employees, active == ActiveTab::Employees))
     }
@@ -284,59 +280,12 @@ impl Render for Root {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         let active_tab = self.registration.read(cx).active_tab;
 
-        // To accept key stroke events it is necessary to focus the
-        // view at the beginning
-        cx.focus(&self.focus_handle);
-
-        // Read the current state of the model
-        let reg_state = self.registration.read(cx);
-
-        // Determine status display logic
-        let (status_text, status_color) = if reg_state.db_connected {
-            ("Database Connected".to_string(), STATUS_COLOR_GREEN)
-        } else if let Some(ref err) = reg_state.connection_error {
-            (format!("Connection Error: {}", err), STATUS_COLOR_RED)
-        } else {
-            ("Not Connected".to_string(), STATUS_COLOR_NEUTRAL) // Gray
-        };
-
         div()
-            .track_focus(&self.focus_handle)
             .flex_col()
             .size_full()
-            // Handle the custom action with data
-            .on_action(cx.listener(|this, action: &TypeChar, cx| {
-                this.registration.update(cx, |reg, _| {
-                    if reg.focused_field != FocusField::None {
-                        reg.handle_text_input(&action.text);
-                    }
-                });
-                cx.notify();
-            }))
-            // 2. Handle control keys (Backspace, Enter, Tab)
-            .on_key_down(cx.listener(|this, event: &KeyDownEvent, cx| {
-                let key = event.keystroke.key.as_str();
-
-                // Handle control keys that aren't captured by character typing
-                if key == "backspace" || key == "enter" {
-                    this.registration.update(cx, |reg, _| {
-                        reg.handle_text_input(key);
-                    });
-                    cx.notify();
-                }
-            }))
             .bg(rgb(DARK_MODE_COLOR))
             .child(self.render_tab_bar(cx))
             // 3. Display the status
-            .child(
-                div()
-                    .p_2()
-                    .bg(rgb(0x222222))
-                    .text_sm()
-                    .text_color(rgb(status_color))
-                    .font_weight(FontWeight::BOLD)
-                    .child(status_text),
-            )
             .child(div().flex_grow().p_4().child(match active_tab {
                 ActiveTab::Settings => self.render_settings_tab(cx),
                 ActiveTab::Manage => self.render_manage_tab(cx),
