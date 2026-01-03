@@ -35,14 +35,14 @@ impl Action for TypeChar {
     }
 
     fn partial_eq(&self, action: &dyn Action) -> bool {
-        todo!()
+        action
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |a| a == self)
     }
 
-    fn debug_name() -> &'static str
-    where
-        Self: Sized,
-    {
-        todo!()
+    fn debug_name() -> &'static str {
+        "TypeChar"
     }
 
     fn build(value: private::serde_json::Value) -> Result<Box<dyn Action>>
@@ -77,7 +77,11 @@ impl Root {
             .bg(rgb(LIST_COLOR))
             .p_2()
             .gap_4()
-            .child(self.tab_button("Settings", ActiveTab::Manage, active == ActiveTab::Settings))
+            .child(self.tab_button(
+                "Settings",
+                ActiveTab::Settings,
+                active == ActiveTab::Settings,
+            ))
             .child(self.tab_button("Manage", ActiveTab::Manage, active == ActiveTab::Manage))
             .child(self.tab_button("List", ActiveTab::Employees, active == ActiveTab::Employees))
     }
@@ -97,16 +101,20 @@ impl Root {
             .cursor_pointer()
             .font_weight(FontWeight::BOLD)
             .on_mouse_down(MouseButton::Left, move |_, cx| {
-                cx.stop_propagation(); // PREVENT OVERLAP ISSUES
+                cx.stop_propagation(); // Prevent overlap issues
                 reg_model.update(cx, |r, cx| {
-                    r.active_tab = tab;
-                    r.focused_field = FocusField::None;
-                    cx.notify();
+                    if r.active_tab != tab {
+                        r.active_tab = tab;
+                        r.focused_field = FocusField::None;
+                        cx.notify(); // Notify model
+                    }
                 });
             })
     }
 
     fn render_settings_tab(&self, cx: &mut ViewContext<Self>) -> AnyElement {
+        //div().child("Empty Settings").into_any_element()
+
         let reg = self.registration.read(cx);
 
         // Clone for the first input field's closure
@@ -228,6 +236,7 @@ impl Root {
     }
 
     fn render_manage_tab(&self, _cx: &mut ViewContext<Self>) -> AnyElement {
+        // div().child("Empty Manage").into_any_element()
         div()
             .flex_row()
             .gap_8()
@@ -267,6 +276,7 @@ impl Root {
     }
 
     fn render_employees_tab(&self, _cx: &mut ViewContext<Self>) -> AnyElement {
+        //div().child("Empty List").into_any_element()
         div()
             .size_full()
             .flex_col()
@@ -279,13 +289,26 @@ impl Root {
 impl Render for Root {
     fn render(&mut self, cx: &mut ViewContext<Self>) -> impl IntoElement {
         let active_tab = self.registration.read(cx).active_tab;
+        let reg_model = self.registration.clone(); // Clone for the closure
 
         div()
+            .id("root-shell") // Giving the root an ID helps with focus routing
+            .track_focus(&self.focus_handle)
+            .key_context("RootView") // Add this!
+            .on_key_down(move |ev, cx| {
+                let keystroke = &ev.keystroke.key;
+                // Debug print to see if keys are actually arriving
+                // println!("Key pressed: {}", keystroke);
+
+                reg_model.update(cx, |reg, model_cx| {
+                    reg.handle_text_input(keystroke);
+                    model_cx.notify();
+                });
+            })
             .flex_col()
             .size_full()
             .bg(rgb(DARK_MODE_COLOR))
             .child(self.render_tab_bar(cx))
-            // 3. Display the status
             .child(div().flex_grow().p_4().child(match active_tab {
                 ActiveTab::Settings => self.render_settings_tab(cx),
                 ActiveTab::Manage => self.render_manage_tab(cx),

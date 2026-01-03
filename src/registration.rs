@@ -36,7 +36,7 @@ impl Registration {
             active_tab: ActiveTab::Settings, // Default tab
             db_connected: false,
             db_name: "face_identity_db".into(),
-            db_password: "".into(),
+            db_password: "m68U0Qd2pZ".into(),
             focused_field: FocusField::None,
             connection_error: None,
         }
@@ -53,7 +53,11 @@ impl Registration {
             "backspace" => {
                 target.pop();
             }
-            k if k.len() == 1 => {
+            "space" => {
+                target.push(' ');
+            }
+            // Use a more robust check for single characters (including symbols and caps)
+            k if k.chars().count() == 1 => {
                 target.push_str(k);
             }
             _ => {}
