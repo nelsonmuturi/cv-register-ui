@@ -6,7 +6,6 @@ use crate::button::*;
 use crate::consts::*;
 use crate::list::*;
 use crate::registration::*;
-use crate::settings::*;
 use crate::styles::*;
 
 pub struct Root {

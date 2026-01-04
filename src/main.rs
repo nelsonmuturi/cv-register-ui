@@ -3,7 +3,6 @@ mod consts;
 mod list;
 mod registration;
 mod root;
-mod settings;
 mod styles;
 
 #[cfg(test)]
