@@ -53,8 +53,13 @@ impl Button {
 
     fn get_label(button_type: &ButtonType) -> String {
         match button_type {
-            ButtonType::RegisterEmployee => "Register Employee".to_owned(),
             ButtonType::Settings => "Settings".to_owned(),
+            ButtonType::Manage => "Manage".to_owned(),
+            ButtonType::Employees => "List".to_owned(),
+            ButtonType::Insert => "Insert".to_owned(),
+            ButtonType::Edit => "Edit".to_owned(),
+            ButtonType::Delete => "Delete".to_owned(),
+            ButtonType::Connect => "Connect to Postgres DB".to_owned(),
         }
     }
 }

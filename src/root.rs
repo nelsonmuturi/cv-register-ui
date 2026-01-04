@@ -7,6 +7,7 @@ use crate::consts::*;
 use crate::list::*;
 use crate::registration::*;
 use crate::styles::*;
+use crate::text_input::*;
 
 pub struct Root {
     pub registration: Model<Registration>,
@@ -77,58 +78,56 @@ impl Root {
             .p_2()
             .gap_4()
             .child(self.tab_button(
-                "Settings",
+                ButtonType::Settings,
                 ActiveTab::Settings,
                 active == ActiveTab::Settings,
             ))
-            .child(self.tab_button("Manage", ActiveTab::Manage, active == ActiveTab::Manage))
-            .child(self.tab_button("List", ActiveTab::Employees, active == ActiveTab::Employees))
+            .child(self.tab_button(
+                ButtonType::Manage,
+                ActiveTab::Manage,
+                active == ActiveTab::Manage,
+            ))
+            .child(self.tab_button(
+                ButtonType::Employees,
+                ActiveTab::Employees,
+                active == ActiveTab::Employees,
+            ))
     }
 
-    fn tab_button(&self, label: &'static str, tab: ActiveTab, is_active: bool) -> impl IntoElement {
+    fn tab_button(&self, b_type: ButtonType, tab: ActiveTab, is_active: bool) -> impl IntoElement {
         let reg_model = self.registration.clone();
-        div()
-            .px_4()
-            .py_2()
-            .rounded_md()
-            .bg(if is_active {
-                rgb(PRIMARY_COLOR)
-            } else {
-                rgb(BUTTON_COLOR)
-            })
-            .child(label)
-            .cursor_pointer()
-            .font_weight(FontWeight::BOLD)
-            .on_mouse_down(MouseButton::Left, move |_, cx| {
-                cx.stop_propagation(); // Prevent overlap issues
-                reg_model.update(cx, |r, cx| {
-                    if r.active_tab != tab {
-                        r.active_tab = tab;
-                        r.focused_field = FocusField::None;
-                        cx.notify(); // Notify model
-                    }
-                });
-            })
+        let variant = if is_active {
+            ButtonVariant::Primary
+        } else {
+            ButtonVariant::Secondary
+        };
+
+        Button::new(b_type, variant).on_click(move |_, cx| {
+            cx.stop_propagation();
+            reg_model.update(cx, |r, cx| {
+                if r.active_tab != tab {
+                    r.active_tab = tab;
+                    r.focused_field = FocusField::None;
+                    cx.notify();
+                }
+            });
+        })
     }
 
     fn render_settings_tab(&self, cx: &mut ViewContext<Self>) -> AnyElement {
-        //div().child("Empty Settings").into_any_element()
-
         let reg = self.registration.read(cx);
-
-        // Clone for the first input field's closure
-        let reg_for_name = self.registration.clone();
-        // Clone for the second input field's closure
-        let reg_for_pass = self.registration.clone();
-        // Clone the handle to move into db-connection mouse-down closure
         let reg_model = self.registration.clone();
+
+        // Local clones for callbacks
+        let reg_name = reg_model.clone();
+        let reg_pass = reg_model.clone();
+        let reg_conn = reg_model.clone();
 
         let status_color = if reg.db_connected {
             STATUS_COLOR_GREEN
         } else {
             STATUS_COLOR_RED
         };
-
         let status_text = if reg.db_connected {
             "Connected"
         } else {
@@ -136,60 +135,41 @@ impl Root {
         };
 
         div()
-            .flex()
             .flex_col()
-            .gap_y(px(16.0))
-            .w(px(600.0))
             .gap_4()
+            .w(px(600.0))
             .child(
                 div()
                     .child(format!("STATUS: {}", status_text))
                     .font_weight(FontWeight::BOLD)
                     .text_color(rgb(status_color)),
             )
-            .gap_4()
-            .child(self.render_input_field(
-                "Database Name",
-                reg.db_name.clone(), // Pass owned String
-                reg.focused_field == FocusField::DbName,
-                move |cx| {
-                    reg_for_name.update(cx, |r, _| r.focused_field = FocusField::DbName);
-                },
-            ))
-            .child(self.render_input_field(
-                "Password",
-                "*".repeat(reg.db_password.len()), // Already an owned String
-                reg.focused_field == FocusField::DbPassword,
-                move |cx| {
-                    reg_for_pass.update(cx, |r, _| r.focused_field = FocusField::DbPassword);
-                },
-            ))
             .child(
-                div()
-                    .flex()
-                    .justify_center()
-                    .items_center()
-                    .font_weight(FontWeight::BOLD)
-                    .bg(rgb(PRIMARY_COLOR))
-                    .p_2()
-                    .rounded_md()
-                    .child("Connect to Postgres DB")
-                    .cursor_pointer()
-                    .on_mouse_down(MouseButton::Left, move |_, cx| {
-                        // Call connect_to_db logic
-                        cx.stop_propagation(); // Prevent overlap issues
-
-                        // Use .update to bridge the context and access the latest state
-                        reg_model.update(cx, |reg_state, model_cx| {
-                            // reg_state is &mut Registration (the latest model data)
-                            // model_cx is &mut ModelContext<Registration>
-                            reg_state.connect_to_db(
-                                reg_state.db_name.clone(),
-                                reg_state.db_password.clone(),
-                                model_cx,
-                            );
-                        });
+                TextInput::new("Database Name", reg.db_name.clone())
+                    .focused(reg.focused_field == FocusField::DbName)
+                    .on_click(move |_, cx| {
+                        reg_name.update(cx, |r, _| r.focused_field = FocusField::DbName);
                     }),
+            )
+            .child(
+                TextInput::new("Password", reg.db_password.clone())
+                    .password(true)
+                    .focused(reg.focused_field == FocusField::DbPassword)
+                    .on_click(move |_, cx| {
+                        reg_pass.update(cx, |r, _| r.focused_field = FocusField::DbPassword);
+                    }),
+            )
+            .child(
+                Button::new(ButtonType::Connect, ButtonVariant::Primary).on_click(move |_, cx| {
+                    cx.stop_propagation();
+                    reg_conn.update(cx, |reg_state, model_cx| {
+                        reg_state.connect_to_db(
+                            reg_state.db_name.clone(),
+                            reg_state.db_password.clone(),
+                            model_cx,
+                        );
+                    });
+                }),
             )
             .into_any_element()
     }
@@ -235,26 +215,23 @@ impl Root {
     }
 
     fn render_manage_tab(&self, _cx: &mut ViewContext<Self>) -> AnyElement {
-        // div().child("Empty Manage").into_any_element()
         div()
             .flex_row()
             .gap_8()
             .child(
-                // Left Side: CRUD Controls
                 div()
                     .flex_col()
                     .gap_2()
                     .w(px(200.0))
-                    .child(self.crud_button("Insert"))
-                    .child(self.crud_button("Edit"))
-                    .child(self.crud_button("Delete")),
+                    .child(Button::new(ButtonType::Insert, ButtonVariant::Neutral))
+                    .child(Button::new(ButtonType::Edit, ButtonVariant::Neutral))
+                    .child(Button::new(ButtonType::Delete, ButtonVariant::Neutral)),
             )
             .child(
-                // Right Side: Mugshot Viewport
                 div().flex_col().child("Headshot Preview:").child(
                     div()
                         .size(px(320.0))
-                        .bg(rgb(0x000000))
+                        .bg(rgb(DARK_MODE_COLOR))
                         .border_1()
                         .border_color(rgb(WHITE_COLOR))
                         .flex()

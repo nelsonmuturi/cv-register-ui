@@ -17,8 +17,13 @@ pub enum FocusField {
 
 #[derive(Clone, Copy)]
 pub enum ButtonType {
-    RegisterEmployee,
     Settings,
+    Manage,
+    Employees,
+    Insert,
+    Edit,
+    Delete,
+    Connect,
 }
 
 pub struct Registration {

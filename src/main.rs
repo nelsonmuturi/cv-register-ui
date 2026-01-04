@@ -4,6 +4,7 @@ mod list;
 mod registration;
 mod root;
 mod styles;
+mod text_input;
 
 #[cfg(test)]
 mod registration_test;
