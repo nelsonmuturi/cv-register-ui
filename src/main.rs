@@ -24,7 +24,7 @@ async fn main() {
             name: "Register".into(),
             items: vec![MenuItem::action("Quit", Quit)],
         }]);
-        let bounds = Bounds::centered(None, size(px(1000.0), px(600.0)), cx);
+        let bounds = Bounds::centered(None, size(px(1280.0), px(800.0)), cx);
 
         let _ = cx.open_window(
             WindowOptions {

@@ -107,7 +107,14 @@ impl Root {
             reg_model.update(cx, |r, cx| {
                 if r.active_tab != tab {
                     r.active_tab = tab;
-                    r.focused_field = FocusField::None;
+
+                    // Focus name input automatically if switching to Persons
+                    r.focused_field = if tab == ActiveTab::Persons {
+                        FocusField::PersonName
+                    } else {
+                        FocusField::None
+                    };
+
                     cx.notify();
                 }
             });
@@ -214,39 +221,141 @@ impl Root {
             )
     }
 
-    fn render_persons_tab(&self, _cx: &mut ViewContext<Self>) -> AnyElement {
+    fn render_persons_tab(&self, cx: &mut ViewContext<Self>) -> AnyElement {
+        let reg = self.registration.read(cx);
+        let reg_model = self.registration.clone();
+
         div()
+            .flex()
+            .size_full()
             .flex_row()
-            .gap_8()
+            .gap_6()
             .child(
+                // LEFT: Scrollable list
                 div()
+                    .flex_none()
+                    .w_1_3()
                     .flex_col()
-                    .gap_2()
-                    .w(px(200.0))
-                    .child(Button::new(ButtonType::Insert, ButtonVariant::Neutral))
-                    .child(Button::new(ButtonType::Edit, ButtonVariant::Neutral))
-                    .child(Button::new(ButtonType::Delete, ButtonVariant::Neutral)),
+                    .bg(rgb(LIST_COLOR))
+                    .rounded_md()
+                    .p_2()
+                    .child(
+                        div()
+                            .text_sm()
+                            .font_weight(FontWeight::BOLD)
+                            .text_color(rgb(WHITE_COLOR))
+                            .mb_2()
+                            .child("Registered Persons"),
+                    )
+                    .child(
+                        div()
+                            .flex_col()
+                            .gap_1()
+                            .children(reg.persons.iter().map(|p| {
+                                let p_clone = p.clone();
+                                let is_selected = reg
+                                    .selected_person
+                                    .as_ref()
+                                    .is_some_and(|s| s.person_id == p.person_id);
+                                let reg_select = reg_model.clone();
+
+                                div()
+                                    .p_2()
+                                    .rounded_sm()
+                                    .bg(if is_selected {
+                                        rgb(PRIMARY_COLOR)
+                                    } else {
+                                        rgb(BUTTON_COLOR)
+                                    })
+                                    .hover(|s| s.bg(rgb(BUTTON_COLOR_HOVER)))
+                                    .child(p.full_name.clone())
+                                    .on_mouse_down(MouseButton::Left, move |_, cx| {
+                                        reg_select.update(cx, |r, cx| {
+                                            r.select_person(p_clone.clone());
+                                            cx.notify();
+                                        });
+                                    })
+                            })),
+                    ),
             )
             .child(
-                div().flex_col().child("Headshot Preview:").child(
-                    div()
-                        .size(px(320.0))
-                        .bg(rgb(DARK_MODE_COLOR))
-                        .border_1()
-                        .border_color(rgb(WHITE_COLOR))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .child("Webcam Feed Placeholder"),
-                ),
+                // RIGHT: Form
+                div()
+                    .flex_col()
+                    .w_2_3()
+                    .gap_4()
+                    .child(
+                        TextInput::new("Full Name", reg.person_draft.full_name.clone())
+                            .focused(reg.focused_field == FocusField::PersonName)
+                            .on_click({
+                                let reg_model = reg_model.clone();
+                                move |_, cx| {
+                                    reg_model.update(cx, |r, _| {
+                                        r.focused_field = FocusField::PersonName
+                                    });
+                                }
+                            }),
+                    )
+                    .child(
+                        div()
+                            .text_sm()
+                            .font_weight(FontWeight::BOLD)
+                            .text_color(rgb(WHITE_COLOR))
+                            .child("Person Type")
+                            .child(self.render_person_type_selector(cx)),
+                    )
+                    .child(
+                        div()
+                            .text_sm()
+                            .font_weight(FontWeight::BOLD)
+                            .text_color(rgb(WHITE_COLOR))
+                            .child("Access Level")
+                            .child(self.render_access_level_selector(cx)),
+                    )
+                    .child(
+                        div()
+                            .flex_row()
+                            .gap_2()
+                            .child(
+                                Button::new(ButtonType::Insert, ButtonVariant::Primary).on_click({
+                                    let reg_model = reg_model.clone();
+                                    move |_, cx| {
+                                        reg_model.update(cx, |r, cx| r.save_person(cx));
+                                    }
+                                }),
+                            )
+                            .child(
+                                Button::new(ButtonType::Delete, ButtonVariant::Secondary).on_click(
+                                    {
+                                        let reg_model = reg_model.clone();
+                                        move |_, cx| {
+                                            reg_model.update(cx, |r, cx| r.delete_person(cx));
+                                        }
+                                    },
+                                ),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .mt_auto()
+                            .h(px(300.0))
+                            .bg(rgb(DARK_MODE_COLOR))
+                            .border_1()
+                            .border_color(rgb(WHITE_COLOR))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child("Webcam Preview Placeholder"),
+                    ),
             )
             .into_any_element()
     }
 
-    // Example of a toggle-based selector for Person Type
+    // gem-2026-01-07: Toggle-based selector for Person Type
     fn render_person_type_selector(&self, cx: &mut ViewContext<Self>) -> AnyElement {
         let reg = self.registration.read(cx);
         let current_type = &reg.person_draft.person_type;
+        let reg_model = self.registration.clone();
 
         div()
             .flex_row()
@@ -267,11 +376,54 @@ impl Root {
                                 rgb(0x333333)
                             })
                             .child(t_str.clone())
-                            .on_mouse_down(MouseButton::Left, move |_, cx| {
-                                // Update state directly or call a method on registration
+                            .on_mouse_down(MouseButton::Left, {
+                                let reg_model = reg_model.clone();
+                                let t_str = t_str.clone();
+                                move |_, cx| {
+                                    reg_model.update(cx, |r, cx| {
+                                        r.update_person_type(t_str.clone());
+                                        cx.notify();
+                                    });
+                                }
                             })
                     }),
             )
+            .into_any_element()
+    }
+
+    // gem-2026-01-07: Toggle-based selector for Access Level
+    fn render_access_level_selector(&self, cx: &mut ViewContext<Self>) -> AnyElement {
+        let reg = self.registration.read(cx);
+        let current_type = &reg.person_draft.person_type;
+        let reg_model = self.registration.clone();
+
+        div()
+            .flex_row()
+            .gap_2()
+            .children(["employee", "guest"].iter().map(|t| {
+                let t_str = t.to_string();
+                let is_active = current_type == &t_str;
+
+                div()
+                    .px_2()
+                    .py_1()
+                    .bg(if is_active {
+                        rgb(0x4a90e2)
+                    } else {
+                        rgb(0x333333)
+                    })
+                    .child(t_str.clone())
+                    .on_mouse_down(MouseButton::Left, {
+                        let reg_model = reg_model.clone();
+                        let t_str = t_str.clone();
+                        move |_, cx| {
+                            reg_model.update(cx, |r, cx| {
+                                r.update_access_level(t_str.clone());
+                                cx.notify();
+                            });
+                        }
+                    })
+            }))
             .into_any_element()
     }
 
@@ -309,7 +461,7 @@ impl Render for Root {
                 // println!("Key pressed: {}", keystroke);
 
                 reg_model.update(cx, |reg, model_cx| {
-                    reg.handle_text_input(keystroke);
+                    reg.handle_text_input(&ev.keystroke);
                     model_cx.notify();
                 });
             })

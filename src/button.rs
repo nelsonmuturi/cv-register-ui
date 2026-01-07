@@ -56,7 +56,7 @@ impl Button {
             ButtonType::Settings => "Settings".to_owned(),
             ButtonType::Persons => "Persons".to_owned(),
             ButtonType::Employees => "List".to_owned(),
-            ButtonType::Insert => "Insert".to_owned(),
+            ButtonType::Insert => "Save".to_owned(),
             ButtonType::Edit => "Edit".to_owned(),
             ButtonType::Delete => "Delete".to_owned(),
             ButtonType::Connect => "Connect to Postgres DB".to_owned(),

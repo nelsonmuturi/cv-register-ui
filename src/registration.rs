@@ -88,26 +88,33 @@ impl Registration {
         }
     }
 
-    pub fn handle_text_input(&mut self, key: &str) {
+    pub fn handle_text_input(&mut self, keystroke: &gpui::Keystroke) {
         let target = match self.focused_field {
             FocusField::DbName => &mut self.db_name,
             FocusField::DbPassword => &mut self.db_password,
             FocusField::PersonName => &mut self.person_draft.full_name,
-            FocusField::None => return,
+            _ => return,
         };
 
-        match key {
+        match keystroke.key.as_str() {
             "backspace" => {
                 target.pop();
             }
             "space" => {
                 target.push(' ');
             }
-            // Use a more robust check for single characters (including symbols and caps)
-            k if k.chars().count() == 1 => {
-                target.push_str(k);
+            "enter" => {
+                self.focused_field = FocusField::None;
             }
-            _ => {}
+            _ => {
+                // Use ime_key for the actual character input
+                if let Some(ref text) = keystroke.ime_key {
+                    // Only push if it's a single character to avoid control strings
+                    if text.chars().count() == 1 {
+                        target.push_str(text);
+                    }
+                }
+            }
         }
     }
 
@@ -155,6 +162,54 @@ impl Registration {
         .detach();
     }
 
+    pub fn select_person(&mut self, person: Person) {
+        self.selected_person = Some(person.clone());
+        // Populate draft for editing
+        self.person_draft = PersonDraft {
+            full_name: person.full_name,
+            person_type: person.person_type,
+            access_level: person.access_level,
+        };
+    }
+
+    pub fn clear_draft(&mut self) {
+        self.selected_person = None;
+        self.person_draft = PersonDraft::default();
+    }
+
+    pub fn update_person_type(&mut self, p_type: String) {
+        self.person_draft.person_type = p_type;
+    }
+
+    pub fn update_access_level(&mut self, level: String) {
+        self.person_draft.access_level = level;
+    }
+
+    pub fn delete_person(&mut self, cx: &mut ModelContext<Self>) {
+        let Some(person) = self.selected_person.clone() else {
+            return;
+        };
+        let Some(pool) = self.db_pool.clone() else {
+            return;
+        };
+
+        cx.spawn(|this, mut cx| async move {
+            let res = sqlx::query("DELETE FROM persons WHERE person_id = $1")
+                .bind(person.person_id)
+                .execute(&pool)
+                .await;
+
+            this.update(&mut cx, |reg, cx| {
+                if res.is_ok() {
+                    reg.clear_draft();
+                    reg.fetch_persons(cx);
+                }
+            })
+            .ok();
+        })
+        .detach();
+    }
+
     // gem-2026-01-07: Fetch all persons from database
     pub fn fetch_persons(&mut self, cx: &mut ModelContext<Self>) {
         // Ensure we have a pool to work with
@@ -187,32 +242,32 @@ impl Registration {
         let Some(pool) = self.db_pool.clone() else {
             return;
         };
+        let draft = &self.person_draft;
+        let selected_id = self.selected_person.as_ref().map(|p| p.person_id);
 
-        let name = self.person_draft.full_name.clone();
-        let p_type = self.person_draft.person_type.clone();
-        let access = self.person_draft.access_level.clone();
+        let name = draft.full_name.clone();
+        let p_type = draft.person_type.clone();
+        let access = draft.access_level.clone();
 
         cx.spawn(|this, mut cx| async move {
-            let res = sqlx::query(
-                "INSERT INTO persons (full_name, person_type, access_level) VALUES ($1, $2, $3)",
-            )
-            .bind(name)
-            .bind(p_type)
-            .bind(access)
-            .execute(&pool)
-            .await;
+        let res = if let Some(id) = selected_id {
+            // UPDATE existing 
+            sqlx::query("UPDATE persons SET full_name=$1, person_type=$2, access_level=$3 WHERE person_id=$4")
+                .bind(name).bind(p_type).bind(access).bind(id)
+                .execute(&pool).await
+        } else {
+            // INSERT new [cite: 60, 69]
+            sqlx::query("INSERT INTO persons (full_name, person_type, access_level) VALUES ($1, $2, $3)")
+                .bind(name).bind(p_type).bind(access)
+                .execute(&pool).await
+        };
 
-            this.update(&mut cx, |reg, cx| {
-                if res.is_ok() {
-                    reg.person_draft = PersonDraft::default(); // Reset form [cite: 76, 151]
-                    reg.fetch_persons(cx); // Refresh the list [cite: 77]
-                } else if let Err(e) = res {
-                    eprintln!("Save error: {}", e);
-                }
-                cx.notify(); // [cite: 56]
-            })
-            .ok();
-        })
-        .detach();
+        this.update(&mut cx, |reg, cx| {
+            if res.is_ok() {
+                reg.clear_draft(); // Reset form [cite: 76, 151]
+                reg.fetch_persons(cx); // Refresh list [cite: 77]
+            }
+        }).ok();
+    }).detach();
     }
 }
