@@ -54,7 +54,7 @@ impl Button {
     fn get_label(button_type: &ButtonType) -> String {
         match button_type {
             ButtonType::Settings => "Settings".to_owned(),
-            ButtonType::Manage => "Manage".to_owned(),
+            ButtonType::Persons => "Persons".to_owned(),
             ButtonType::Employees => "List".to_owned(),
             ButtonType::Insert => "Insert".to_owned(),
             ButtonType::Edit => "Edit".to_owned(),

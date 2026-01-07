@@ -83,9 +83,9 @@ impl Root {
                 active == ActiveTab::Settings,
             ))
             .child(self.tab_button(
-                ButtonType::Manage,
-                ActiveTab::Manage,
-                active == ActiveTab::Manage,
+                ButtonType::Persons,
+                ActiveTab::Persons,
+                active == ActiveTab::Persons,
             ))
             .child(self.tab_button(
                 ButtonType::Employees,
@@ -214,7 +214,7 @@ impl Root {
             )
     }
 
-    fn render_manage_tab(&self, _cx: &mut ViewContext<Self>) -> AnyElement {
+    fn render_persons_tab(&self, _cx: &mut ViewContext<Self>) -> AnyElement {
         div()
             .flex_row()
             .gap_8()
@@ -239,6 +239,38 @@ impl Root {
                         .justify_center()
                         .child("Webcam Feed Placeholder"),
                 ),
+            )
+            .into_any_element()
+    }
+
+    // Example of a toggle-based selector for Person Type
+    fn render_person_type_selector(&self, cx: &mut ViewContext<Self>) -> AnyElement {
+        let reg = self.registration.read(cx);
+        let current_type = &reg.person_draft.person_type;
+
+        div()
+            .flex_row()
+            .gap_2()
+            .children(
+                ["employee", "customer", "visitor", "other"]
+                    .iter()
+                    .map(|t| {
+                        let t_str = t.to_string();
+                        let is_active = current_type == &t_str;
+
+                        div()
+                            .px_2()
+                            .py_1()
+                            .bg(if is_active {
+                                rgb(0x4a90e2)
+                            } else {
+                                rgb(0x333333)
+                            })
+                            .child(t_str.clone())
+                            .on_mouse_down(MouseButton::Left, move |_, cx| {
+                                // Update state directly or call a method on registration
+                            })
+                    }),
             )
             .into_any_element()
     }
@@ -287,7 +319,7 @@ impl Render for Root {
             .child(self.render_tab_bar(cx))
             .child(div().flex_grow().p_4().child(match active_tab {
                 ActiveTab::Settings => self.render_settings_tab(cx),
-                ActiveTab::Manage => self.render_manage_tab(cx),
+                ActiveTab::Persons => self.render_persons_tab(cx),
                 ActiveTab::Employees => div().child("Employee List").into_any_element(),
             }))
     }
