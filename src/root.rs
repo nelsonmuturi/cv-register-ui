@@ -315,7 +315,7 @@ impl Root {
                     .child(
                         div()
                             .flex_row()
-                            .gap_2()
+                            .gap_4()
                             .child(
                                 Button::new(ButtonType::Insert, ButtonVariant::Primary).on_click({
                                     let reg_model = reg_model.clone();
@@ -337,6 +337,7 @@ impl Root {
                     )
                     .child(
                         div()
+                            .w_1_2()
                             .mt_auto()
                             .h(px(300.0))
                             .bg(rgb(DARK_MODE_COLOR))
